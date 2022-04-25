@@ -104,12 +104,15 @@ router.post("/v1/user/:mode", function (req, res, next) {
           user.username +
           "." +
           file.name.split(".")[1];
+        console.log("done", file.path);
       });
       form.on('file', function (name, file) {
         if (!image_types.includes(file.name.split('.')[1].toLowerCase())) {
           return;
         }
         if (file.name && isSetup) {
+          console.log("file", file)
+          console.log("path:", file.path);
           cloudinary.v2.uploader.upload(file.path,
             function (error, result) {
               console.log(result, error);

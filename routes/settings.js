@@ -7,12 +7,12 @@ const mime = require('mime-types')
 var db = require('../utils/handlers/user');
 var formParser = require('../utils/form-parser.js');
 const fs = require('file-system');
-const {cloudinary, isSetup} = require('../config/cloudinary.js');
+const { cloudinary, isSetup } = require('../config/cloudinary.js');
 
 var image_types = ["png", "jpeg", "gif"];
 
 /* GET users listing. */
-router.get("/", function(req, res, next) {
+router.get("/", function (req, res, next) {
   db.findOne({ _id: req.session._id }, (err, user) => {
     res.render("me/index", {
       title: req.app.conf.name,
@@ -21,7 +21,7 @@ router.get("/", function(req, res, next) {
   });
 });
 
-router.get("/settings", function(req, res, next) {
+router.get("/settings", function (req, res, next) {
   db.findOne({ _id: req.session._id }, (err, user) => {
     res.render("me/settings", {
       title: req.app.conf.name,
@@ -30,7 +30,7 @@ router.get("/settings", function(req, res, next) {
   });
 });
 
-router.get("/activity", function(req, res, next) {
+router.get("/activity", function (req, res, next) {
   db.findOne({ _id: req.session._id }, (err, user) => {
     res.render("me/activity", {
       title: req.app.conf.name,
@@ -39,7 +39,7 @@ router.get("/activity", function(req, res, next) {
   });
 });
 
-router.get("/post/:action/:query", function(req, res, next) {
+router.get("/post/:action/:query", function (req, res, next) {
   switch (req.params.action) {
     case "edit":
       res.render("index");
@@ -51,12 +51,12 @@ router.get("/post/:action/:query", function(req, res, next) {
           console.log(u);
           if (
             u.posts[u.posts.indexOf(u.posts.find(x => x._id == id))].static_url
+
           )
-            fs.unlinkSync(
-              "./public" +
-                u.posts[u.posts.indexOf(u.posts.find(x => x._id == id))]
-                  .static_url
-            );
+            var post_link = u.posts[u.posts.indexOf(u.posts.find(x => x._id == id))].static_url;
+          cloudinary.v2.uploader.destroy((post_link.substr(post_link.length - 24)).slice(0, 20), function (error, result) {
+            console.log(result, error)
+          });
           u.posts.splice(u.posts.indexOf(u.posts.find(x => x._id == id)), 1);
           u.save(err => {
             if (err) throw err;
@@ -71,87 +71,87 @@ router.get("/post/:action/:query", function(req, res, next) {
   }
 });
 
-router.post('/upload', formParser,function(req, res, next) {
-			// Generate a random id
-			var random_id = guid.raw();
-      var final_location, type;
-			if(req.files.filetoupload.name && isSetup) {
-      cloudinary.v2.uploader.upload(req.files.filetoupload.path,
-        function(error, result) {
-          console.log(result, error);
-          if (!error) {
-            final_location = result.url;
-            type = mime.lookup(req.files.filetoupload.name).split("/")[1]
-            db.findOne({username:req.session.user}, (err, u) => {
-      				console.log(u)
-                if(u!=undefined) {
-      				u.posts.push({
-      					_id:random_id,
-      					author:req.session.user,
-      					authorID: req.session._id,
-      					static_url:final_location,
-      					caption:req.body.caption,
-      					category:req.body.type,
-      					comments:[],
-      					likes:[],
-      					type:type,
-      					createdAt:new Date(),
-      					lastEditedAt:new Date()
-      				})
-      				u.save(err => {
-      					if (err) throw err;
-      					console.log('Post saved')
-      					// Redirect back after the job is done.
-      					res.redirect('/')
-      				})
-      			} else {
+router.post('/upload', formParser, function (req, res, next) {
+  // Generate a random id
+  var random_id = guid.raw();
+  var final_location, type;
+  if (req.files.filetoupload.name && isSetup) {
+    cloudinary.v2.uploader.upload(req.files.filetoupload.path,
+      function (error, result) {
+        console.log(result, error);
+        if (!error) {
+          final_location = result.url;
+          type = mime.lookup(req.files.filetoupload.name).split("/")[1]
+          db.findOne({ username: req.session.user }, (err, u) => {
+            console.log(u)
+            if (u != undefined) {
+              u.posts.push({
+                _id: random_id,
+                author: req.session.user,
+                authorID: req.session._id,
+                static_url: final_location,
+                caption: req.body.caption,
+                category: req.body.type,
+                comments: [],
+                likes: [],
+                type: type,
+                createdAt: new Date(),
+                lastEditedAt: new Date()
+              })
+              u.save(err => {
+                if (err) throw err;
+                console.log('Post saved')
+                // Redirect back after the job is done.
+                res.redirect('/')
+              })
+            } else {
               res.redirect('/')
             }
-      		})
-          }
-        });
-		} else if (req.files.filetoupload.name) {
-      // Assign static_url path
-      var oldpath = req.files.filetoupload.path;
-      var newpath = path.join(
-        __dirname,
-        `../public/feeds/${req.session.user}_${random_id}${req.files.filetoupload.name}`
-      );
-      var final_location = `/feeds/${req.session.user}_${random_id}${req.files.filetoupload.name}`;
+          })
+        }
+      });
+  } else if (req.files.filetoupload.name) {
+    // Assign static_url path
+    var oldpath = req.files.filetoupload.path;
+    var newpath = path.join(
+      __dirname,
+      `../public/feeds/${req.session.user}_${random_id}${req.files.filetoupload.name}`
+    );
+    var final_location = `/feeds/${req.session.user}_${random_id}${req.files.filetoupload.name}`;
 
-      console.log(
-        `${oldpath} - OldPath\n ${newpath} - Newpath\n ${final_location} - DiskLocation\n`
-      );
-      // Finally upload the file to disk and save the feed to users profile.
-      var type = mime.lookup(req.files.filetoupload.name).split("/")[1];
-      mv(oldpath, newpath, function(err) {
-        console.log("moving files");
+    console.log(
+      `${oldpath} - OldPath\n ${newpath} - Newpath\n ${final_location} - DiskLocation\n`
+    );
+    // Finally upload the file to disk and save the feed to users profile.
+    var type = mime.lookup(req.files.filetoupload.name).split("/")[1];
+    mv(oldpath, newpath, function (err) {
+      console.log("moving files");
+    });
+    db.findOne({ username: req.session.user }, (err, u) => {
+      console.log(u);
+      u.posts.push({
+        _id: random_id,
+        author: req.session.user,
+        authorID: req.session._id,
+        static_url: final_location,
+        caption: req.body.caption,
+        category: req.body.type,
+        comments: [],
+        likes: [],
+        type: type,
+        createdAt: new Date(),
+        lastEditedAt: new Date()
       });
-      db.findOne({ username: req.session.user }, (err, u) => {
-        console.log(u);
-        u.posts.push({
-          _id: random_id,
-          author: req.session.user,
-          authorID: req.session._id,
-          static_url: final_location,
-          caption: req.body.caption,
-          category: req.body.type,
-          comments: [],
-          likes: [],
-          type: type,
-          createdAt: new Date(),
-          lastEditedAt: new Date()
-        });
-        u.save(err => {
-          if (err) throw err;
-          console.log("Post saved");
-          // Redirect back after the job is done.
-          res.redirect("/");
-        });
+      u.save(err => {
+        if (err) throw err;
+        console.log("Post saved");
+        // Redirect back after the job is done.
+        res.redirect("/");
       });
-    }
+    });
+  }
 })
-router.get("/upload", function(req, res, next) {
+router.get("/upload", function (req, res, next) {
   res.render("upload/file-upload", {
     title: req.app.conf.name,
     user: req.session.user
