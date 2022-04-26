@@ -8,6 +8,7 @@ var db = require('../utils/handlers/user');
 var formParser = require('../utils/form-parser.js');
 const fs = require('file-system');
 const { cloudinary, isSetup } = require('../config/cloudinary.js');
+const { post } = require("request");
 
 var image_types = ["png", "jpeg", "gif"];
 
@@ -54,7 +55,10 @@ router.get("/post/:action/:query", function (req, res, next) {
 
           )
             var post_link = u.posts[u.posts.indexOf(u.posts.find(x => x._id == id))].static_url;
-          cloudinary.v2.uploader.destroy((post_link.substr(post_link.length - 24)).slice(0, 20), function (error, result) {
+          let indexx = post_link.lastIndexOf('.')
+          let asset_name = post_link.slice(indexx - 20, indexx)
+          console.log(asset_name, asset_name.length);
+          cloudinary.v2.uploader.destroy(asset_name, function (error, result) {
             console.log(result, error)
           });
           u.posts.splice(u.posts.indexOf(u.posts.find(x => x._id == id)), 1);
@@ -80,7 +84,8 @@ router.post('/upload', formParser, function (req, res, next) {
       function (error, result) {
         console.log(result, error);
         if (!error) {
-          final_location = result.url;
+          final_location = "https" + (result.url).substring((result.url).indexOf(':'), (result.url).length);
+          console.log(final_location);
           type = mime.lookup(req.files.filetoupload.name).split("/")[1]
           db.findOne({ username: req.session.user }, (err, u) => {
             console.log(u)
